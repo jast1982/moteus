@@ -98,6 +98,7 @@ MOTEUS_SOURCES = [
     "bootloader.h",
     "drv8323.h",
     "drv8323.cc",
+    "extControl.h",
     "error.cc",
     "hardfault.s",
     "firmware_info.h",

@@ -35,10 +35,10 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     # Make sure git is clean first.
-    dirty = (subprocess.run("git diff-index --quiet HEAD --",
-                            shell=True).returncode != 0)
-    if dirty:
-        raise RuntimeError("git is dirty, cannot release!")
+  #  dirty = (subprocess.run("git diff-index --quiet HEAD --",
+   #                         shell=True).returncode != 0)
+#    if dirty:
+ #       raise RuntimeError("git is dirty, cannot release!")
     git_hash = subprocess.check_output(
         "git rev-parse HEAD", shell=True).decode('utf8').strip()
 
@@ -51,9 +51,10 @@ def main():
     print("Building...")
     print()
 
-    run('tools/bazel clean --expunge')
+#    run('tools/bazel clean --expunge')
     run('tools/bazel build --config=target -c opt //:target')
 
+    run(f'rm -f {outdir}/*.elf')
     run(f'cp bazel-bin/fw/moteus.elf {outdir}/{datestr}-moteus-{git_hash}.elf')
     run(f'cp bazel-bin/fw/can_bootloader.elf {outdir}/{datestr}-bootloader-{git_hash}.elf')
 

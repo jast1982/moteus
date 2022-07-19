@@ -408,10 +408,37 @@ class MoteusController::Impl : public multiplex::MicroServer::Server {
 
   void Poll() {
     // Check to see if we have a command to send out.
+	static uint16_t extCtrlTimeout=100;
     if (command_valid_) {
       command_valid_ = false;
       bldc_.Command(command_);
-    }
+    }else
+	{
+		bool av;
+		float pos,speed,kp,kd,torque;
+		
+		aux2_port_.checkCmdAvailable(&av,&pos, &speed, &kp, &kd, &torque);
+		if (av)
+		{
+			command_.position=std::numeric_limits<float>::quiet_NaN();
+			command_.stop_position=pos;
+			command_.velocity=speed;
+			command_.kp_scale=kp;
+			command_.kd_scale=kd;
+			command_.max_torque_Nm=torque;
+			const auto new_mode = static_cast<BldcServo::Mode>(kPosition);
+			command_.mode=new_mode;
+			bldc_.Command(command_);
+			extCtrlTimeout=100;
+		}else if (extCtrlTimeout)
+		{
+			const auto new_mode = static_cast<BldcServo::Mode>(kStopped);
+			command_.mode=new_mode;
+			bldc_.Command(command_);
+			extCtrlTimeout--;
+		}
+		aux2_port_.updateState(bldc_.status().position,bldc_.status().velocity,bldc_.status().torque_Nm);
+	}
     aux1_port_.Poll();
     aux2_port_.Poll();
   }

@@ -65,6 +65,7 @@ struct UartEncoder {
     enum Mode {
       kDisabled,
       kAksim2,
+	  kExtControl,
 
       kNumModes,
     };
@@ -424,6 +425,7 @@ struct IsEnum<moteus::aux::UartEncoder::Config::Mode> {
     return {{
         { M::kDisabled, "disabled" },
         { M::kAksim2, "aksim2" },
+		{ M::kExtControl, "ExtControl" },
       }};
   }
 };

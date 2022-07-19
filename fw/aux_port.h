@@ -35,6 +35,7 @@
 #include "fw/millisecond_timer.h"
 #include "fw/moteus_hw.h"
 #include "fw/stm32_i2c.h"
+#include "fw/extControl.h"
 
 namespace moteus {
 
@@ -160,8 +161,36 @@ class AuxPort {
     if (aksim2_) {
       aksim2_->ISR_Update(&status_.uart);
     }
+	
+    if (extControl_) {
+      extControl_->ISR_Update(&status_.uart);
+    }
   }
 
+  void checkCmdAvailable(bool* available, float* desiredPos, float* speed, float* kp, float* kd, float* torque)
+  {
+	  if (extControl_)
+	  {
+		  if (extControl_->active())
+		  {
+			  *available=true;
+			  extControl_->getCommand(desiredPos,speed,kp,kd,torque);
+		  }else
+		  {
+			  *available=false;
+		  }
+	  }else
+		  *available=false;
+  }
+  
+  void updateState(float pos, float speed, float torque)
+  {
+	  if (extControl_)
+	  {
+			extControl_->updateState(pos,speed,torque);
+	  }
+  }
+  
   static void WaitForAdc(ADC_TypeDef* adc) MOTEUS_CCM_ATTRIBUTE {
     while ((adc->ISR & ADC_ISR_EOC) == 0);
   }
@@ -285,6 +314,13 @@ class AuxPort {
     if (ic_pz_) {
       ic_pz_->PollMillisecond();
     }
+	
+	if (extControl_)
+	{
+		extControl_->PollMillisecond();
+	}
+	
+	
   }
 
   void Poll() {
@@ -343,7 +379,36 @@ class AuxPort {
       WriteOk(response);
       return;
     }
+	
+	if (cmd_text == "extCtrl") {
+		if (!extControl_) {
+			WriteMessage(response, "ERR no ext Control setup\r\n");
+			return;
+		}
 
+		if (extControl_->active())
+		{
+			WriteMessage(response, "EXT control active\r\n");
+			return;
+		}else
+		{
+			WriteMessage(response, "EXT control not active\r\n");
+			return;
+		}
+			
+	}
+		
+	if (cmd_text == "extCtrl-reset") {
+		if (!extControl_) {
+			WriteMessage(response, "ERR no ext Control setup\r\n");
+			return;
+		}
+
+        WriteMessage(response, "AUX-CTRL restart\r\n");
+		extControl_->resetTimer();
+		return;
+	}
+	
     if (cmd_text == "ic-extra") {
       if (!ic_pz_) {
         WriteMessage(response, "ERR no iC-PZ setup\r\n");
@@ -614,7 +679,8 @@ class AuxPort {
 
     uart_.reset();
     aksim2_.reset();
-
+	extControl_.reset();
+	
     any_adc_ = false;
     adc_ = {{}};
 
@@ -812,6 +878,11 @@ class AuxPort {
           aksim2_.emplace(config_.uart, &*uart_, timer_);
           break;
         }
+		case C::kExtControl:
+		{
+		  extControl_.emplace(&*uart_, timer_);
+		  break;
+		}
         default: {
           status_.error = aux::AuxError::kUartPinError;
           return;
@@ -903,6 +974,7 @@ class AuxPort {
   std::optional<aux::Stm32Index> index_;
   std::optional<Stm32G4DmaUart> uart_;
   std::optional<Aksim2> aksim2_;
+  std::optional<ExtControl> extControl_;
 
   bool any_adc_ = false;
   static constexpr int kNumAdcs = 4;

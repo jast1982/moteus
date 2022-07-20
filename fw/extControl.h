@@ -19,8 +19,8 @@
 #include "fw/stm32g4_dma_uart.h"
 
 //#define YOKE
-#define THRUST_RIGHT
-//#define THRUST_LEFT
+//#define THRUST_RIGHT
+#define THRUST_LEFT
 namespace moteus {
 
 
@@ -95,48 +95,46 @@ class ExtControl {
 					initState_=0;
 					memcpy(&rxNewVal_,&rxData_[0],sizeof(rxNewVal_));
 				}
-					
+				rxState_=0;
+			break;
 		}
   }
 
   void PollMillisecond()
   {
-	  if (msTimer_<10000)
-	  {
-		msTimer_++;
+	msTimer_++;
+	
+	if ((msTimer_%8)==0)
+	{
+		struct UART_PACKET pkt;
+		pkt.sb1=UART_SB1;
+		pkt.sb2=UART_SB2;
+		pkt.msgT=uartTxSelect_;
 		
-		if ((msTimer_%10)==0)
+		switch(uartTxSelect_)
 		{
-			struct UART_PACKET pkt;
-			pkt.sb1=UART_SB1;
-			pkt.sb2=UART_SB2;
-			pkt.msgT=uartTxSelect_;
-			
-			switch(uartTxSelect_)
-			{
-				case UART_TX_SEL_POS:
-					memcpy(&pkt.data[0],&pos_,sizeof(pos_));
-				break;
-				case UART_TX_SEL_SPEED:
-					memcpy(&pkt.data[0],&speed_,sizeof(speed_));
-				break;
-				case UART_TX_SEL_TORQUE:
-					memcpy(&pkt.data[0],&torque_,sizeof(torque_));
-				break;
-			}
-			
-			pkt.ck=0xAA;
-			for (uint8_t i=2;i<sizeof(pkt)-1;i++)
-				pkt.ck+=((uint8_t*)&pkt)[i];
-			
-			for (uint8_t i=0;i<sizeof(pkt);i++)
-				uart_->write_char( ((uint8_t*)&pkt)[i]);
-			
-			uartTxSelect_++;
-			uartTxSelect_%=UART_TX_SEL_MAX;
-			
+			case UART_TX_SEL_POS:
+				memcpy(&pkt.data[0],&pos_,sizeof(pos_));
+			break;
+			case UART_TX_SEL_SPEED:
+				memcpy(&pkt.data[0],&speed_,sizeof(speed_));
+			break;
+			case UART_TX_SEL_TORQUE:
+				memcpy(&pkt.data[0],&torque_,sizeof(torque_));
+			break;
 		}
-	  }
+		
+		pkt.ck=0xAA;
+		for (uint8_t i=2;i<sizeof(pkt)-1;i++)
+			pkt.ck+=((uint8_t*)&pkt)[i];
+		
+		for (uint8_t i=0;i<sizeof(pkt);i++)
+			uart_->write_char( ((uint8_t*)&pkt)[i]);
+		
+		uartTxSelect_++;
+		uartTxSelect_%=UART_TX_SEL_MAX;
+		
+	}
 	
 	
 	if (!query_outstanding_)
@@ -176,7 +174,7 @@ class ExtControl {
 		
 	}
 	  
-#ifdef THRUST_RIGHT
+#if defined(THRUST_RIGHT) or defined(THRUST_LEFT)
 	  if (actCmd_==EXTC_CMD_INIT)
 	  {
 		  if (initState_==0)
@@ -188,19 +186,27 @@ class ExtControl {
 			
 			zeroPos_=0.0f;
 			cmdPos_=std::numeric_limits<float>::quiet_NaN();
+#ifdef THRUST_RIGHT
 			cmdSpeed_=+0.5f;
-			cmdKp_=0.0f;
+#else
+			cmdSpeed_=-0.5f;
+#endif
+			cmdKp_=1.0f;
 			cmdKd_=1.0f;
 			cmdTorque_=0.2f;
 			controlActive_=true;
 			
-			if (fabs(speed_)<0.25f)
+			if (fabs(torque_)>0.10f)
 			{
 				_limitDetectedCnt++;
 				
-				if (_limitDetectedCnt>500)
+				if (_limitDetectedCnt>100)
 				{
-					zeroPos_=pos_-1.72f;
+#ifdef THRUST_RIGHT
+					zeroPos_=pos_-1.77f;
+#else
+					zeroPos_=pos_+1.77f;
+#endif
 					initState_=2;
 				}
 			}else
@@ -209,30 +215,52 @@ class ExtControl {
 			lastPos_=pos_;
 		  }else if (initState_==2)
 		  {
+#ifdef THRUST_RIGHT
 			if (pos_>0.0f)
 			{
 				cmdPos_=std::numeric_limits<float>::quiet_NaN();
 				cmdSpeed_=-0.4f;
+#else
+			if (pos_<0.0f)
+			{
+				cmdPos_=std::numeric_limits<float>::quiet_NaN();
+				cmdSpeed_=+0.4f;
+#endif
 				cmdKp_=1.0f;
 				cmdKd_=1.0f;
 				cmdTorque_=0.1f;
 				controlActive_=true;
 			}else
 			{
+				initState_=3;
+			}
+		  }else if (initState_==3)
+		  {
+			  if (fabs(pos_)>0.1f)
+			  {
 				initState_=0;
 				actCmd_=EXTC_CMD_NORMAL_MODE;
-			}
+			  }else
+			  {
+				cmdPos_=std::numeric_limits<float>::quiet_NaN();
+				cmdSpeed_=0.0f;
+				cmdKp_=0.0f;
+				cmdKd_=0.0f;
+				cmdTorque_=0.1f;
+				controlActive_=true;
+			  }
 		  }
+			  
 	  }else
 	  if (actCmd_==EXTC_CMD_NORMAL_MODE)
 	  {
 		  #define RANGE_LIMIT 1.0f
 		  if ((pos_<0.1f) && (pos_>-0.1f))
 		  {
-				cmdPos_=std::numeric_limits<float>::quiet_NaN();
+				cmdPos_=0.0f;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.0f;
-				cmdKd_=3.0f-fabs(pos_)*20.0f;
+				cmdKp_=0.2f;
+				cmdKd_=1.7f-fabs(pos_)*10.0f;
 				cmdTorque_=0.6f;
 				controlActive_=true;
 		  }
@@ -240,9 +268,9 @@ class ExtControl {
 		  {
 				cmdPos_=RANGE_LIMIT;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.1f+(pos_-RANGE_LIMIT)*5.0f;
-				if (cmdKp_<0.1f)
-					cmdKp_=0.1f;
+				cmdKp_=+(pos_-RANGE_LIMIT)*1.0f;
+				if (cmdKp_<0.0f)
+					cmdKp_=0.0f;
 				if (cmdKp_>1.0f)
 					cmdKp_=1.0f;
 				cmdKd_=1.0f;
@@ -253,9 +281,9 @@ class ExtControl {
 		  {
 				cmdPos_=-RANGE_LIMIT;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.1f-(pos_+RANGE_LIMIT)*5.0f;
-				if (cmdKp_<0.1f)
-					cmdKp_=0.1f;
+				cmdKp_=-(pos_+RANGE_LIMIT)*1.0f;
+				if (cmdKp_<0.0f)
+					cmdKp_=0.0f;
 				if (cmdKp_>1.0f)
 					cmdKp_=1.0f;
 				cmdKd_=1.0f;
@@ -268,7 +296,9 @@ class ExtControl {
 				cmdPos_=std::numeric_limits<float>::quiet_NaN();
 				cmdSpeed_=0.0f;
 				cmdKp_=0.0f;
-				cmdKd_=1.0f;
+				cmdKd_=0.0f+fabs(speed_);
+				if (cmdKd_>0.5f)
+					cmdKd_=0.5f;
 				cmdTorque_=0.2f;
 				controlActive_=true;
 		  }
@@ -326,18 +356,33 @@ class ExtControl {
 				controlActive_=true;
 			}else
 			{
+				initState_=4;
+			}
+		  }else if (initState_==4)
+		  {
+			  if (fabs(pos_)>0.1f)
+			  {
 				initState_=0;
 				actCmd_=EXTC_CMD_NORMAL_MODE;
-			}
+			  }else
+			  {
+				cmdPos_=std::numeric_limits<float>::quiet_NaN();
+				cmdSpeed_=0.0f;
+				cmdKp_=0.0f;
+				cmdKd_=0.0f;
+				cmdTorque_=0.1f;
+				controlActive_=true;
+			  }
 		  }
 	  }else
 	  if (actCmd_==EXTC_CMD_NORMAL_MODE)
 	  {
+		  #define RANGE_LIMIT 0.8f
 		  if ((pos_<0.1f) && (pos_>-0.1f))
 		  {
-				cmdPos_=std::numeric_limits<float>::quiet_NaN();
+				cmdPos_=0.0f;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.0f;
+				cmdKp_=1.0f;
 				cmdKd_=4.0f-fabs(pos_)*30.0f;
 				cmdTorque_=0.6f;
 				controlActive_=true;
@@ -345,27 +390,26 @@ class ExtControl {
 		  {
 				cmdPos_=0.8f;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.1f+(pos_-0.8f)*5.0f;
-				if (cmdKp_<0.1f)
-					cmdKp_=0.1f;
+				cmdKp_=+(pos_-RANGE_LIMIT)*1.0f;
+				if (cmdKp_<0.0f)
+					cmdKp_=0.0f;
 				if (cmdKp_>1.0f)
 					cmdKp_=1.0f;
 				cmdKd_=1.0f;
 				cmdTorque_=0.8f;
-				stopAct_=1;	
 				controlActive_=true;
 		  }else if (pos_<-0.8f)
 		  {
 				cmdPos_=-0.8f;
 				cmdSpeed_=0.0f;
-				cmdKp_=0.1f-(pos_+0.8f)*5.0f;
-				if (cmdKp_<0.1f)
-					cmdKp_=0.1f;
+				
+				cmdKp_=-(pos_+RANGE_LIMIT)*1.0f;
+				if (cmdKp_<0.0f)
+					cmdKp_=0.0f;
 				if (cmdKp_>1.0f)
 					cmdKp_=1.0f;
 				cmdKd_=1.0f;
 				cmdTorque_=0.8f;
-				stopAct_=1;	
 				controlActive_=true;
 		  }else
 		  {

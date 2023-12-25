@@ -1,4 +1,4 @@
-# -*- python -*-
+## -*- python -*-
 
 # Copyright 2023 mjbots Robotic Systems, LLC.  info@mjbots.com
 #
@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 package(default_visibility = ["//visibility:public"])
 load("@com_github_ARMmbed_mbed-g4//:rules.bzl", g4_mbed_binary = "mbed_binary")
 load("@com_github_ARMmbed_mbed-g4-bootloader//:rules.bzl", g4_bootloader_mbed_binary = "mbed_binary")
@@ -24,6 +25,43 @@ COPTS = [
     "-gdwarf-4",
 ]
 
+EXT_DEPS = [
+]
+
+EXT_DEPS_2 = [
+
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/cstdio",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/arm-none-eabi/thumb/v7e-m+fp/softfp/bits/c++config.h",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/arm-none-eabi/thumb/v7e-m+fp/softfp/bits/os_defines.h",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/arm-none-eabi/thumb/v7e-m+fp/softfp/bits/cpu_defines.h",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/pstl/pstl_config.h",
+  "/opt/local/arm-none-eabi/include/stdio.h",
+  "/opt/local/arm-none-eabi/include/_ansi.h",
+  "/opt/local/arm-none-eabi/include/newlib.h",
+  "/opt/local/arm-none-eabi/include/_newlib_version.h",
+  "/opt/local/arm-none-eabi/include/sys/config.h",
+  "/opt/local/arm-none-eabi/include/machine/ieeefp.h",
+  "/opt/local/arm-none-eabi/include/sys/features.h",
+  "/opt/local/arm-none-eabi/include/sys/cdefs.h",
+  "/opt/local/arm-none-eabi/include/machine/_default_types.h",
+  "/opt/local/lib/gcc/arm-none-eabi/12.2.0/include/stddef.h",
+  "/opt/local/lib/gcc/arm-none-eabi/12.2.0/include/stdarg.h",
+  "/opt/local/arm-none-eabi/include/sys/reent.h",
+  "/opt/local/arm-none-eabi/include/_ansi.h",
+  "/opt/local/arm-none-eabi/include/sys/_types.h",
+  "/opt/local/arm-none-eabi/include/machine/_types.h",
+  "/opt/local/arm-none-eabi/include/sys/lock.h",
+  "/opt/local/arm-none-eabi/include/sys/types.h",
+  "/opt/local/arm-none-eabi/include/sys/_stdint.h",
+  "/opt/local/arm-none-eabi/include/sys/_pthreadtypes.h",
+  "/opt/local/arm-none-eabi/include/machine/types.h",
+  "/opt/local/arm-none-eabi/include/sys/stdio.h",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/cstdlib",
+  "/opt/local/arm-none-eabi/include/stdlib.h",
+  "/opt/local/arm-none-eabi/include/machine/stdlib.h",
+  "/opt/local/arm-none-eabi/include/c++/12.2.0/bits/std_abs.h",
+    
+]
 cc_library(
     name = "common",
     hdrs = [
@@ -44,7 +82,7 @@ cc_library(
     srcs = [
         "foc.cc",
     ],
-    deps = [
+    deps = EXT_DEPS + [
         "@com_github_mjbots_mjlib//mjlib/base:limit",
         "@com_github_mjbots_mjlib//mjlib/base:visitor",
         "@com_github_mjbots_mjlib//mjlib/micro:atomic_event_queue",

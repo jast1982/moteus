@@ -39,6 +39,7 @@
 #include "fw/millisecond_timer.h"
 #include "fw/moteus_hw.h"
 #include "fw/stm32_i2c.h"
+#include "fw/oftEnc.h"
 
 namespace moteus {
 
@@ -122,6 +123,9 @@ class AuxPort {
     }
     if (ic_pz_) {
       ic_pz_->ISR_StartSample();
+    }
+    if (oftEnc_) {
+      oftEnc_->ISR_Update(&status_.uart);
     }
   }
 
@@ -209,6 +213,7 @@ class AuxPort {
     if (cui_amt21_) {
       cui_amt21_->ISR_Update(&status_.uart);
     }
+    
 
     if (i2c_) {
       ISR_I2C_Update();
@@ -755,7 +760,7 @@ class AuxPort {
     if (rs422_re_) { rs422_re_->write(1); }
     aksim2_.reset();
     cui_amt21_.reset();
-
+    oftEnc_.reset();
     for (auto& cfg : adc_info_.config) {
       cfg.adc_num = -1;
       cfg.channel = -1;
@@ -1039,6 +1044,10 @@ class AuxPort {
           cui_amt21_.emplace(config_.uart, &*uart_, timer_);
           break;
         }
+        case C::kOftEnc: {
+          oftEnc_.emplace(config_.uart, &*uart_, timer_);
+          break;
+        }
         default: {
           status_.error = aux::AuxError::kUartPinError;
           return;
@@ -1161,6 +1170,7 @@ class AuxPort {
   std::optional<aux::Stm32Index> index_;
   std::optional<Stm32G4DmaUart> uart_;
   std::optional<Aksim2> aksim2_;
+  std::optional<OftEnc> oftEnc_;
   std::optional<CuiAmt21> cui_amt21_;
   std::optional<DigitalOut> rs422_re_;
   std::optional<DigitalOut> rs422_de_;

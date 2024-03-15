@@ -153,6 +153,7 @@ MOTEUS_SOURCES = [
     "moteus_hw.cc",
     "millisecond_timer.h",
     "motor_driver.h",
+    "oftEnc.h",
     "stm32_dma.h",
     "stm32g4_adc.h",
     "stm32g4_adc.cc",
@@ -228,13 +229,15 @@ OCD_G4 = (
     "-f target/stm32g4x.cfg "
 )
 
-genrule(
-    name = "flash",
-    tags = ["manual"],
-    srcs = ["moteus.08000000.bin", "moteus.0800c000.bin", "moteus.08010000.bin"],
-    outs = ["flash.stamp"],
-    cmd = (OCD_G4 + " -c init -c \"reset_config none separate; program $(location moteus.08000000.bin) verify 0x8000000; program $(location moteus.0800c000.bin) verify 0x800c000; program $(location moteus.08010000.bin) verify reset exit 0x08010000\" && touch $@"),
-)
+#genrule(
+#    name = "flash",
+#    tags = ["manual"],
+#    srcs = ["moteus.08000000.bin", "moteus.0800c000.bin", "moteus.08010000.bin"],
+#    outs = [""],
+#    outs = ["flash.stamp"],
+#    cmd = ""
+#(OCD_G4 + " -c init -c \"reset_config none separate; program $(location moteus.08000000.bin) verify 0x8000000; program $(location moteus.0800c000.bin) verify 0x800c000; program $(location moteus.08010000.bin) verify reset exit 0x08010000\" && touch $@"),
+#)
 
 cc_test(
     name = "test",

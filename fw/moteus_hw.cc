@@ -58,7 +58,9 @@ FamilyAndVersion DetectMoteusFamily(MillisecondTimer* timer) {
   timer->wait_ms(2);
 
   FamilyAndVersion result;
-  result.family = 0;
+  result.family = 1;
+  result.hw_version = 1;
+  return result;
 
   // We check for family 1, "moteus n1", by seeing if we can find a
   // DRV8323 on a chip select that is different from that used on all
@@ -177,6 +179,7 @@ PinName unsupported() {
   return NC;
 }
 }
+#define OFT_MOTEUS
 
 MoteusHwPins FindHardwarePins(FamilyAndVersion fv) {
   MoteusHwPins result;
@@ -239,10 +242,12 @@ MoteusHwPins FindHardwarePins(FamilyAndVersion fv) {
     result.drv8323_miso = PC_11;
     result.drv8323_sck = PC_10;
     result.drv8323_fault = PB_13;
-
+#ifdef OFT_MOTEUS
+    result.debug_led1 = PA_11;
+#else
     result.debug_led1 = PB_15;
+#endif
     result.power_led = PC_6;
-
     // Family 1 devices should have all current sense inputs on "fast"
     // channels.
     result.current1 = PA_3;       // ADC1

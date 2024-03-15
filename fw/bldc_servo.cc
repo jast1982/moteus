@@ -2121,7 +2121,6 @@ class BldcServo::Impl {
       ISR_DoCurrent(sin_cos, 0.0f, limited_q_A, 0.0f);
       return;
     }
-
     // Control position to whichever bound we are currently violating.
     PID::ApplyOptions apply_options;
     apply_options.kp_scale = data->kp_scale;

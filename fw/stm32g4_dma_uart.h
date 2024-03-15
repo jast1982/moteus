@@ -96,6 +96,15 @@ class Stm32G4DmaUart {
     uart_->TDR = data;
   }
 
+  void start_dma_read_circular(mjlib::base::string_span output) MOTEUS_CCM_ATTRIBUTE {
+    options_.rx_dma->CNDTR = output.size();
+    options_.rx_dma->CMAR = u32(&output[0]);
+    
+    options_.rx_dma->CCR |= DMA_CIRCULAR;
+    options_.rx_dma->CCR |= DMA_CCR_EN;
+    uart_->CR3 |= USART_CR3_DMAR;
+  }
+
   void start_dma_read(mjlib::base::string_span output) MOTEUS_CCM_ATTRIBUTE {
     options_.rx_dma->CNDTR = output.size();
     options_.rx_dma->CMAR = u32(&output[0]);

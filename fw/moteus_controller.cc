@@ -321,6 +321,8 @@ enum class Register {
   kDriverFault2 = 0x141,
 };
 
+#define OFT_AUX
+
 aux::AuxHardwareConfig GetAux1HardwareConfig() {
   auto aux_options = aux::AuxExtraOptions();
 
@@ -337,6 +339,29 @@ aux::AuxHardwareConfig GetAux1HardwareConfig() {
           aux_options,
           };
   } else if (g_measured_hw_family == 1) {
+    #ifdef OFT_AUX
+    aux_options.i2c_pullup = NC;
+    aux_options.rs422_re = PB_10;
+    aux_options.rs422_de = PB_11;
+    return aux::AuxHardwareConfig{
+      {{
+          //          ADC#  CHN    I2C      SPI      USART    TIMER
+          { 0, PA_5,   -1,   0,    nullptr, SPI1,    nullptr, TIM2 },
+          { 0, PB_14,   0,   5,    nullptr, nullptr, nullptr, nullptr },
+
+          { 1, PB_4,   -1,  -1,    nullptr, SPI1,    nullptr,  TIM3 },
+
+          { 2, PA_7,    1,   4,    nullptr, SPI1,    nullptr, TIM3 },
+
+          { 3, PA_15,  -1,  -1,    nullptr,    nullptr, nullptr,  TIM2 },
+
+          { 4, PB_3,   -1,  -1,    nullptr, nullptr, nullptr,  TIM2 },
+          { 4, PB_9,   -1,  -1,    nullptr,    nullptr, nullptr, nullptr },
+          { -1, NC },
+              }},
+          aux_options,
+    };
+    #else
     aux_options.i2c_pullup = PB_8;
     aux_options.rs422_re = PB_10;
     aux_options.rs422_de = PB_11;
@@ -358,6 +383,7 @@ aux::AuxHardwareConfig GetAux1HardwareConfig() {
               }},
           aux_options,
     };
+    #endif
   } else {
     mbed_die();
   }
@@ -379,6 +405,28 @@ aux::AuxHardwareConfig GetAux2HardwareConfig() {
           aux_options,
           };
   } else if (g_measured_hw_family == 1) {
+    #ifdef OFT_AUX
+    aux_options.i2c_pullup = NC;
+    return aux::AuxHardwareConfig{
+      {{
+          //          ADC#  CHN    I2C      SPI      USART    TIMER
+          { 0, PF_1,    1,  10,    nullptr, nullptr,    nullptr, nullptr },
+
+          { 1, PA_10,  -1,  -1,    nullptr, nullptr,    USART1,  nullptr },
+          { 2, PF_0,    0,  10,    nullptr, nullptr, nullptr, nullptr },
+
+          { 3, PA_12,  -1,  -1,    nullptr, nullptr,    nullptr, nullptr },
+          { 4, PC_4,    1,   5,    nullptr,    nullptr, USART1,  nullptr },
+
+          { 5, PB_7,   -1,  -1,    nullptr, nullptr, nullptr,  nullptr },
+          { 6, PB_8,   -1,  -1,    nullptr, nullptr, nullptr,  nullptr },
+          { -1, NC, },
+          }},
+          aux_options,
+          };
+
+    
+    #else
     aux_options.i2c_pullup = PA_12;
     return aux::AuxHardwareConfig{
       {{
@@ -395,6 +443,8 @@ aux::AuxHardwareConfig GetAux2HardwareConfig() {
               }},
           aux_options,
           };
+    #endif
+
   } else {
     mbed_die();
   }
@@ -916,7 +966,7 @@ class MoteusController::Impl : public multiplex::MicroServer::Server {
             ((status.sources[0].active_velocity ? 1 : 0) << 1) |
             ((status.sources[1].active_theta ? 1 : 0) << 2) |
             ((status.sources[1].active_velocity ? 1 : 0) << 3) |
-            ((status.sources[2].active_theta ? 1 : 0) << 4);
+            ((status.sources[2].active_theta ? 1 : 0) << 4) |
             ((status.sources[2].active_velocity ? 1 : 0) << 5);
         return IntMapping(validity, type);
       }
